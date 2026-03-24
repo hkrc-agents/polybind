@@ -1,6 +1,6 @@
 node_modules/
-codegen/dist/
 codegen/*.tsbuildinfo
+# codegen/dist is intentionally tracked — bind.sh uses it without a build step
 *.node
 *.so
 build/

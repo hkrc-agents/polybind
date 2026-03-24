@@ -21,6 +21,12 @@ const __dir = dirname(fileURLToPath(import.meta.url))
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+export interface ToolsYamlConfigProperty {
+  type: string
+  description?: string
+  default?: unknown
+}
+
 export interface ToolsYaml {
   extension: {
     name: string
@@ -28,6 +34,11 @@ export interface ToolsYaml {
     description?: string
     so_name: string         // NAPI module name; ArkTS import: `import X from 'libX.so'`
     platforms?: string[]
+    config?: {              // Extension-level config schema → manifest schema.properties
+      properties?: Record<string, ToolsYamlConfigProperty>
+      required?: string[]
+      additionalProperties?: boolean
+    }
   }
   tools: Array<{
     name: string
@@ -36,12 +47,19 @@ export interface ToolsYaml {
   }>
 }
 
+export interface ManifestTool {
+  name: string
+  description: string
+  input_schema: Record<string, unknown>
+}
+
 export interface ManifestTypeEntry {
   kind: string
   type: string
   description?: string
   platforms?: string[]
   schema?: Record<string, unknown>
+  tools?: ManifestTool[]   // Tool list with input schemas (polybind extension to manifest format)
 }
 
 export interface ManifestFile {
@@ -61,6 +79,7 @@ export function parseToolsYaml(yamlPath: string): ToolsYaml {
 // ── Generate manifest.yaml ────────────────────────────────────────────────────
 
 export function buildManifest(descriptor: ToolsYaml): ManifestFile {
+  const cfg = descriptor.extension.config
   return {
     name: descriptor.extension.name,
     version: descriptor.extension.version,
@@ -73,9 +92,15 @@ export function buildManifest(descriptor: ToolsYaml): ManifestFile {
         platforms: descriptor.extension.platforms as ('node' | 'arkts')[],
         schema: {
           type: 'object',
-          properties: {},
-          additionalProperties: false,
+          properties: cfg?.properties ?? {},
+          ...(cfg?.required?.length ? { required: cfg.required } : {}),
+          additionalProperties: cfg?.additionalProperties ?? false,
         },
+        tools: descriptor.tools.map(t => ({
+          name: t.name,
+          description: t.description,
+          input_schema: t.input_schema,
+        })),
       },
     ],
   }
