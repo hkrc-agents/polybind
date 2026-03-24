@@ -12,10 +12,18 @@ for both platforms — only the CMake configuration differs.
 
 ### Case 1: C++ Only
 
-The tool author writes C++ implementing `include/polybind/tool.h`. polybind:
-1. Generates `CMakeLists.txt` that compiles the C++ + universal NAPI bridge
-2. Produces `<name>_node.node` (Node.js) and `lib<name>.so` (HarmonyOS)
-3. Generates `PolybindExtension.ts` (Node.js IExtension) and `PolybindExtension.ets` (ArkTS)
+The tool author writes:
+- `tools.yaml` — extension descriptor with tool names, descriptions, and JSON Schema
+- Tool logic in C++ (e.g., `grep_files.cpp`) — the actual tool implementations
+
+polybind generates everything else:
+1. `polybind_entry.cpp` — implements `include/polybind/tool.h` (`PolyExtension` C struct,
+   `poly_init`, `poly_call_tool`, `kTools[]`, `polymath_get_extension()`) from `tools.yaml`
+2. `CMakeLists.txt` — compiles the C++ + universal NAPI bridge into `.node` and/or `.so`
+3. `PolybindExtension.ts` (Node.js IExtension) and `PolybindExtension.ets` (ArkTS wrapper)
+4. `manifest.yaml` / `manifest.ts` — polymath extension manifest
+
+The tool author never touches `tool.h` directly.
 
 ### Case 2: C++ + ArkTS Mixed
 
@@ -36,9 +44,14 @@ Existing ArkTS code. Same as Case 2 but no C++ involved.
 ### Case 1
 
 ```
-tool.cpp  →  polymath_get_extension()  →  PolyExtension (C struct)
-napi_bridge.cpp  →  NAPI listTools()/callTool()  →  JS strings
-PolybindExtension.ts/.ets  →  IExtension/IToolkit  →  polymath hub
+[tool author writes]
+tools.yaml  ──codegen──►  polybind_entry.cpp  (PolyExtension C struct, generated)
+my_tool.cpp             ──►  tool logic (written by author)
+                               │
+                               ▼
+                     polymath_get_extension()  →  PolyExtension
+                     napi_bridge.cpp           →  NAPI listTools()/callTool()  →  JS strings
+                     PolybindExtension.ts/.ets →  IExtension/IToolkit  →  polymath hub
 ```
 
 ### Case 2 (e.g., JSVMEval)
