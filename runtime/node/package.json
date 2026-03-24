@@ -1,0 +1,20 @@
+{
+  "name": "@polybind/runtime-node",
+  "version": "0.1.0",
+  "description": "polybind Node.js runtime wrapper",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "peerDependencies": {
+    "@polymath/types": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

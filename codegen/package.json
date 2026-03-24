@@ -1,0 +1,22 @@
+{
+  "name": "@polybind/codegen",
+  "version": "0.1.0",
+  "description": "polybind code generation CLI",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "polybind": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}

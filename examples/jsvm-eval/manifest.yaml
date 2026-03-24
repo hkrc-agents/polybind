@@ -1,0 +1,11 @@
+name: j-s-v-m-eval
+version: "0.1.0"
+types:
+  - kind: toolkit
+    type: j-s-v-m-eval
+    platforms: [arkts]
+    schema:
+      type: object
+      properties:
+{}
+      additionalProperties: false

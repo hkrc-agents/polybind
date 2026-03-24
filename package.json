@@ -1,0 +1,15 @@
+{
+  "name": "polybind",
+  "version": "0.1.0",
+  "description": "Bridge C++/ArkTS tools into polymath IExtension/IToolkit",
+  "type": "module",
+  "workspaces": [
+    "codegen",
+    "runtime/node"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "license": "MIT"
+}
