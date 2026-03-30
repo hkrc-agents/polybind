@@ -73,12 +73,48 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ── Build target ──────────────────────────────────────────────────────────────
 
+# WSL2 + Windows clang++.exe: source files must be on a Windows-accessible drive
+# (e.g. /mnt/d/... → D:/...). Resolve symlinks first, then convert via wslpath -m.
+# Linux cmake validates the /mnt/... real path; clang++.exe receives the D:/... path.
+if(CMAKE_CXX_COMPILER MATCHES "\\.exe$")
+  set(_wsl_sources)
+  foreach(_src IN LISTS POLYBIND_TOOL_SOURCES POLYBIND_NAPI_BRIDGE)
+    if(_src STREQUAL "")
+      continue()
+    endif()
+    # Resolve symlinks so wslpath sees the real /mnt/<drive>/... path
+    file(REAL_PATH "${_src}" _real_src)
+    execute_process(
+      COMMAND wslpath -m "${_real_src}"
+      OUTPUT_VARIABLE _wsrc
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      ERROR_QUIET
+    )
+    if(_wsrc)
+      list(APPEND _wsl_sources "${_wsrc}")
+    else()
+      list(APPEND _wsl_sources "${_src}")
+    endif()
+  endforeach()
+  set(_ALL_SOURCES ${_wsl_sources})
+else()
+  set(_ALL_SOURCES ${POLYBIND_TOOL_SOURCES} ${POLYBIND_NAPI_BRIDGE})
+endif()
+
 set(_TARGET "${PROJECT_NAME}")
 
-add_library(${_TARGET} SHARED
-  ${POLYBIND_TOOL_SOURCES}
-  ${POLYBIND_NAPI_BRIDGE}
-)
+# For WSL2 + Windows clang++.exe: Windows paths (D:/...) are not findable by Linux cmake,
+# so mark them GENERATED to bypass the existence check. The Windows binary can still
+# open D:/... paths at compile time.
+add_library(${_TARGET} SHARED)
+if(CMAKE_CXX_COMPILER MATCHES "\\.exe$")
+  foreach(_wsrc IN LISTS _ALL_SOURCES)
+    set_source_files_properties("${_wsrc}" PROPERTIES GENERATED TRUE)
+    target_sources(${_TARGET} PRIVATE "${_wsrc}")
+  endforeach()
+else()
+  target_sources(${_TARGET} PRIVATE ${_ALL_SOURCES})
+endif()
 
 target_compile_definitions(${_TARGET} PRIVATE
   POLYBIND_MODULE_NAME=${POLYBIND_MODULE_NAME}

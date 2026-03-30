@@ -200,85 +200,169 @@ tools:
 
 ---
 
-## Requirements & Environment Setup
+## Environment Setup
 
-### Required Tools
+根据你的目标平台，按以下步骤配置环境。只需配置你实际要用的平台。
 
-| Tool | Version | Notes |
-|------|---------|-------|
-| Node.js | ≥ 14 | ESM support required. polybind auto-detects `nvm` installs. |
-| CMake | ≥ 3.14 | Only needed for Case 1 (C++ builds) |
-| C++ compiler | C++17 | GCC 9+, Clang 10+, or MSVC 2019+ |
-| nlohmann/json | any | Vendored in `include/vendor/nlohmann/` — no install needed |
+---
 
-### Node.js Build (`--platform node`)
+### Step 1 — 安装 Node.js（所有平台必须）
+
+polybind 的代码生成工具（codegen）运行在 Node.js 上，所有平台都需要。
 
 ```bash
-# Install node-api-headers (required for building .node modules)
-npm install -g node-api-headers
+# 推荐：通过 nvm 安装（自动管理版本）
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc        # 或重新打开终端
 
-# Or as a local dev dep in your project
-npm install --save-dev node-api-headers
+nvm install 18          # 安装 Node.js 18 LTS
+nvm use 18
+
+# 验证
+node --version          # 应输出 v18.x.x
 ```
 
-polybind's cmake file (`polybind-node.cmake`) auto-detects the header path via:
-```cmake
-execute_process(COMMAND node -p "require('node-api-headers').include_dir" ...)
-```
+> **最低要求：** Node.js ≥ 14。Node.js 18 LTS 为推荐版本。
 
-### HarmonyOS Build (`--platform arkts`)
+---
 
-Requires the HarmonyOS SDK native directory. Set via environment variable or let polybind auto-detect:
+### Step 2 — 配置 `--platform node` 编译环境
+
+> 跳过此步骤如果只编译 HarmonyOS（`--platform arkts`）。
+
+需要安装：CMake ≥ 3.14 和 C++17 编译器。
 
 ```bash
-# Option 1: Set environment variable (recommended)
-export OHOS_SDK_NATIVE=/path/to/DevEco/sdk/default/openharmony/native
+# Ubuntu / Debian
+sudo apt update
+sudo apt install -y cmake build-essential   # GCC 9+ 和 CMake
 
-# Option 2: Pass to cmake directly
-cmake -B build -DPOLYBIND_PLATFORM=arkts -DOHOS_SDK_NATIVE=/path/to/native .
+# 验证
+cmake --version     # 应输出 cmake version 3.x.x
+g++ --version       # 应输出 g++ (GCC) 9.x 或更高
 ```
 
-polybind auto-detects the SDK in these locations (checked in order):
-1. `$OHOS_SDK_NATIVE` environment variable
-2. `/mnt/d/harmonyos/DevEco Studio/sdk/default/openharmony/native` (WSL2 default)
-3. `/mnt/c/Users/$USER/AppData/Local/Huawei/Sdk/openharmony/native` (Windows SDK)
-4. `$HOME/harmonyos/native` (Linux install)
+Node.js NAPI 头文件由 polybind 自动检测（优先 `node-api-headers` 包，
+fallback 到 nvm 目录），无需手动安装。
 
-**WSL2 users (Windows DevEco Studio SDK):**
+---
 
-If your DevEco Studio is installed on Windows and you're building from WSL2, polybind handles
-this automatically. The Windows OHOS SDK ships `clang.exe`/`clang++.exe` PE binaries;
-WSL2's `binfmt_misc` allows running them directly from Linux.
+### Step 3 — 配置 `--platform arkts` 编译环境（HarmonyOS）
 
-polybind detects `clang.exe` and configures CMake accordingly:
-- Converts `/mnt/d/harmonyos/...` sysroot path to `D:/harmonyos/...` for the Windows binary
-- Passes the sysroot via `CMAKE_SYSROOT` (CMake handles quoting, important for paths with spaces)
-- Sets `-target aarch64-linux-ohos` and `-D__MUSL__` automatically
+> 跳过此步骤如果只编译 Node.js（`--platform node`）。
 
-No manual configuration needed — just ensure DevEco Studio is installed on Windows and the SDK
-native directory is accessible from WSL2 under `/mnt/`.
+#### 3.1 安装 DevEco Studio（Windows）
 
-**Verify your setup:**
+从华为官网下载并安装 **DevEco Studio 5.0.5 或更高版本**：
+https://developer.huawei.com/consumer/cn/deveco-studio/
+
+安装后，DevEco Studio 会自动下载 OpenHarmony SDK。SDK 的 native 目录通常位于：
+
+```
+C:\Users\<你的用户名>\AppData\Local\Huawei\Sdk\openharmony\<版本号>\native\
+```
+
+或者，如果你在安装时选择了自定义路径（例如 `D:\harmonyos`）：
+
+```
+D:\harmonyos\DevEco Studio\sdk\default\openharmony\native\
+```
+
+> **SDK 版本要求：** OpenHarmony API 12+（DevEco Studio 5.0.5+ 默认包含）。
+> SDK 中包含 Clang 15.0.4 和 cmake 3.22，无需单独安装。
+
+#### 3.2 开启 WSL2（Windows）
+
+polybind 在 WSL2（Linux 子系统）中运行 `bash bind.sh`。
+
+```powershell
+# 在 Windows PowerShell（管理员）中执行：
+wsl --install           # 安装 WSL2 + Ubuntu（Windows 10 2004+ / Windows 11）
+# 重启电脑后生效
+```
+
+已有 WSL1 的用户升级到 WSL2：
+```powershell
+wsl --set-default-version 2
+wsl --set-version Ubuntu 2
+```
+
+#### 3.3 在 WSL2 中验证 SDK 可访问
+
+打开 WSL2 终端，确认 Windows 盘已挂载且 SDK 可见：
+
 ```bash
-# Check the cross-compiler is accessible
-ls "/mnt/d/harmonyos/DevEco Studio/sdk/default/openharmony/native/llvm/bin/clang++.exe"
+# 确认 Windows 盘挂载正常（以 D 盘为例）
+ls /mnt/d/
 
-# Check sysroot headers exist
-ls "/mnt/d/harmonyos/DevEco Studio/sdk/default/openharmony/native/sysroot/usr/include/napi/native_api.h"
+# 验证 DevEco Studio SDK 路径（根据你的实际安装路径修改）
+SDK="/mnt/d/harmonyos/DevEco Studio/sdk/default/openharmony/native"
+# 或 AppData 路径：
+# SDK="/mnt/c/Users/<用户名>/AppData/Local/Huawei/Sdk/openharmony/<版本>/native"
 
-# Run a test build
-bash bind.sh ./examples/hello/ ./out/ --platform arkts
+ls "$SDK/build-tools/cmake/bin/cmake.exe"   # 应存在
+ls "$SDK/llvm/bin/clang++.exe"              # 应存在
+ls "$SDK/sysroot/usr/include/napi/native_api.h"  # 应存在
 ```
 
-### Setting Up the codegen CLI
+#### 3.4 验证 `.exe` 文件可在 WSL2 中执行
 
-On first run, `bind.sh` automatically builds the codegen tool. Or build manually:
+WSL2 通过 `binfmt_misc` 机制直接运行 Windows `.exe` 文件：
 
 ```bash
-cd codegen
-npm install
-npm run build   # outputs to dist/index.js
+# 检查 binfmt_misc 是否已启用
+ls /proc/sys/fs/binfmt_misc/WSLInterop    # 存在即为已启用
+
+# 如果不存在，手动启用：
+echo ':WSLInterop:M::MZ::/init:PF' | sudo tee /proc/sys/fs/binfmt_misc/register
 ```
+
+> 通常不需要手动操作，WSL2 默认已启用。
+
+#### 3.5 完整验证
+
+```bash
+SDK="/mnt/d/harmonyos/DevEco Studio/sdk/default/openharmony/native"
+
+"$SDK/build-tools/cmake/bin/cmake.exe" --version
+# 期望输出：cmake version 3.22.x
+
+"$SDK/llvm/bin/clang++.exe" --version
+# 期望输出：clang version 15.0.4  Target: aarch64-unknown-linux-ohos
+```
+
+两条命令都有输出，说明环境配置正确。
+
+---
+
+### Step 4 — 运行第一次构建
+
+环境准备完成后，在 WSL2 终端中运行：
+
+```bash
+# 克隆 polybind
+git clone <polybind-repo> ~/polybind
+
+# 第一次运行时 bind.sh 会自动构建 codegen（约 10 秒）
+bash ~/polybind/bind.sh ./my-tool/ ./out/ --platform both
+```
+
+`--platform both` 会同时编译 Node.js（`.node`）和 HarmonyOS（`.so`）两个产物。
+如果只需要其中一个，使用 `--platform node` 或 `--platform arkts`。
+
+---
+
+### 依赖版本速查
+
+| 组件 | 版本 | 说明 |
+|------|------|------|
+| Node.js | ≥ 14（推荐 18 LTS） | 运行 codegen |
+| CMake | ≥ 3.14 | `--platform node` 编译（系统安装） |
+| GCC | ≥ 9（C++17） | `--platform node` 编译 |
+| DevEco Studio | 5.0.5+ | `--platform arkts`，自带 cmake 3.22 + Clang 15 |
+| WSL2 | 任意版本 | `--platform arkts` 在 Windows 上构建 |
+| js-yaml | ^4.1.0 | codegen 运行时依赖，自动安装 |
+| nlohmann/json | — | 已内置于 `include/vendor/`，无需安装 |
 
 ---
 

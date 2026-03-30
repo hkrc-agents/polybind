@@ -283,7 +283,25 @@ polybind/
 ---
 
 ## `bind.sh` Execution Flow
-
+```text 
+bind.sh --platform node|arkts|both
+    │
+    ├── Step 2: 生成 manifest.yaml
+    ├── Step 3: 生成 polybind_entry.cpp + CMakeLists.txt   ← 准备编译材料
+    ├── Step 4: 生成 PolybindExtension.ts/.ets
+    │
+    └── Step 5: 编译（仅当 --platform 有值时执行）
+            │
+            ├── cmake -B build/node  -DPOLYBIND_PLATFORM=node  .  → configure
+            ├── cmake --build build/node                           → 编译
+            │       └── g++/clang++ 编译所有 .cpp + napi_bridge.cpp
+            │           链接 → agentic_rag_node.node
+            │
+            ├── cmake -B build/arkts -DPOLYBIND_PLATFORM=arkts .  → configure
+            └── cmake --build build/arkts                          → 编译
+                    └── clang.exe -target aarch64-linux-ohos 编译所有 .cpp + napi_bridge.cpp
+                        链接 libace_napi.z.so → libagentic_rag.so
+```
 ```
 bind.sh <src> <out>
     │
