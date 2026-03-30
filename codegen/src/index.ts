@@ -34,6 +34,8 @@ import {
   writeManifestTs,
   writeArkTSWrapper,
   writeNodeWrapper,
+  writeNodeWrapperDts,
+  writeArkTSNodeStub,
   writeCMakeLists,
   generateManifestFromEts,
 } from './generate.js'
@@ -128,12 +130,22 @@ function cmdGenerate(args: string[]): void {
 
   if (platforms.includes('node')) {
     writeNodeWrapper(descriptor, absOut)
-    console.log(`✓ PolybindExtension.ts  → ${join(absOut, 'PolybindExtension.ts')}`)
+    writeNodeWrapperDts(descriptor, absOut)
+    console.log(`✓ PolybindExtension.js  → ${join(absOut, 'PolybindExtension.js')}`)
+    console.log(`✓ PolybindExtension.d.ts → ${join(absOut, 'PolybindExtension.d.ts')}`)
   }
 
   if (platforms.includes('arkts')) {
     writeArkTSWrapper(descriptor, absOut)
+    writeNodeWrapperDts(descriptor, absOut)
     console.log(`✓ PolybindExtension.ets → ${join(absOut, 'PolybindExtension.ets')}`)
+    console.log(`✓ PolybindExtension.d.ts → ${join(absOut, 'PolybindExtension.d.ts')}`)
+    // Only generate ArkTS Node.js stub when there is no node_entry.
+    // If node_entry is set, the node platform already wrote the correct import wrapper above.
+    if (!descriptor.extension.node_entry) {
+      writeArkTSNodeStub(descriptor, absOut)
+      console.log(`✓ PolybindExtension.js  → ${join(absOut, 'PolybindExtension.js')} (Node.js stub)`)
+    }
   }
 }
 
@@ -213,12 +225,20 @@ function cmdWrappers(args: string[]): void {
 
   if (platforms.includes('node')) {
     writeNodeWrapper(descriptor, absOut)
-    console.log(`✓ PolybindExtension.ts  → ${join(absOut, 'PolybindExtension.ts')}`)
+    writeNodeWrapperDts(descriptor, absOut)
+    console.log(`✓ PolybindExtension.js  → ${join(absOut, 'PolybindExtension.js')}`)
+    console.log(`✓ PolybindExtension.d.ts → ${join(absOut, 'PolybindExtension.d.ts')}`)
   }
 
   if (platforms.includes('arkts')) {
     writeArkTSWrapper(descriptor, absOut)
+    writeNodeWrapperDts(descriptor, absOut)
     console.log(`✓ PolybindExtension.ets → ${join(absOut, 'PolybindExtension.ets')}`)
+    console.log(`✓ PolybindExtension.d.ts → ${join(absOut, 'PolybindExtension.d.ts')}`)
+    if (!descriptor.extension.node_entry) {
+      writeArkTSNodeStub(descriptor, absOut)
+      console.log(`✓ PolybindExtension.js  → ${join(absOut, 'PolybindExtension.js')} (Node.js stub)`)
+    }
   }
 }
 
